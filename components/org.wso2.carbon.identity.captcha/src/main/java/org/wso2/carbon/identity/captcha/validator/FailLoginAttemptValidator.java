@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
-import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.captcha.exception.CaptchaException;
@@ -37,13 +36,12 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
  * FailLoginAttemptValidator.
  */
-public class FailLoginAttemptValidator extends AbstractEventHandler implements AuthenticationDataPublisher {
+public class FailLoginAttemptValidator extends AbstractEventHandler {
 
     private static Log log = LogFactory.getLog(FailLoginAttemptValidator.class);
 
@@ -53,14 +51,19 @@ public class FailLoginAttemptValidator extends AbstractEventHandler implements A
     }
 
     @Override
-    public void publishAuthenticationStepSuccess(HttpServletRequest httpServletRequest,
-                                                 AuthenticationContext authenticationContext, Map<String, Object> map) {
+    public void handleEvent(Event event) throws IdentityEventException {
 
+        AuthenticationContext context = (AuthenticationContext) event.getEventProperties().get(EventProperty.CONTEXT);
+        Map<String, Object> unmodifiableParamMap = (Map<String, Object>) event.getEventProperties()
+                .get(EventProperty.PARAMS);
+        String eventName = event.getEventName();
+
+        if (EventName.AUTHENTICATION_STEP_FAILURE.name().equals(eventName)) {
+            publishAuthenticationStepFailure(context, unmodifiableParamMap);
+        }
     }
 
-    @Override
-    public void publishAuthenticationStepFailure(HttpServletRequest httpServletRequest,
-                                                 AuthenticationContext authenticationContext, Map<String, Object> map) {
+    protected void publishAuthenticationStepFailure(AuthenticationContext authenticationContext, Map<String, Object> map) {
 
         if ("BasicAuthenticator".equals(authenticationContext.getCurrentAuthenticator()) && map != null && map.get
                 (FrameworkConstants.AnalyticsAttributes.USER) != null) {
